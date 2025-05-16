@@ -38,7 +38,9 @@ import java.util.regex.Pattern;
 @EventBusSubscriber(modid = Core.MODID)
 public final class EntitySpawnHandler {
 
-    /* ===== «живые» ссылки на конфиг ==================================== */
+    /* ------------------------------------------------------------------
+     *  helpers to pull live config maps
+     * ---------------------------------------------------------------- */
     private static Map<Integer, Double> HEALTH() {
         return Config.HEALTH_CONFIG;
     }
@@ -51,39 +53,66 @@ public final class EntitySpawnHandler {
         return Config.SPEED_CONFIG;
     }
 
-    /* =================================================================== */
+    /**
+     * true ⇢ моб должен быть изменён
+     */
+    private static boolean shouldModify(Mob mob) {
+        return Config.MODIFY_FRIENDLY || mob.getType().getCategory() == MobCategory.MONSTER;
+    }
 
+    /* ==================================================================
+     *  Первый этап — изменяем атрибуты / выдаём экипировку
+     *  (FinalizeSpawn срабатывает ДО помещения сущности в мир)
+     * =================================================================*/
     @SubscribeEvent
     public static void onFinalizeSpawn(FinalizeSpawnEvent event) {
-        Mob mob = event.getEntity();
-
-        /* 0. friendly-мобы пропускаются (если так в конфиге) */
-        if (!Config.MODIFY_FRIENDLY
-                && mob.getType().getCategory() != MobCategory.MONSTER)
-            return;
+        if (!(event.getEntity() instanceof Mob mob)) return;
+        if (!shouldModify(mob)) return;
 
         LevelAccessor level = event.getLevel();
         RandomSource rnd = level.getRandom();
 
-        /* 1. атрибуты */
-        modifyAttribute(mob, Attributes.MAX_HEALTH, rnd, HEALTH());
+        /* --- 1. атрибуты ------------------------------------------------*/
+        boolean hpChanged =
+                modifyAttribute(mob, Attributes.MAX_HEALTH, rnd, HEALTH());
+
         modifyAttribute(mob, Attributes.ATTACK_DAMAGE, rnd, DAMAGE());
         modifyAttribute(mob, Attributes.MOVEMENT_SPEED, rnd, SPEED());
 
-        /* 2. бесконечные эффекты */
-        addPotionEffects(mob, rnd);
+        /* после изменения MAX_HEALTH сразу лечим моба до нового максимума */
+        if (hpChanged) mob.setHealth(mob.getMaxHealth());
 
-        /* 3. броня */
-        if (rnd.nextDouble() < Config.ARMOR_DROP_CHANCE / 100.0)
-            equipArmor(mob, rnd);
-
-        /* 4-a. обычное оружие (кроме скелетов) */
-        if (!(mob instanceof AbstractSkeleton)
-                && rnd.nextDouble() < Config.WEAPON_DROP_CHANCE / 100.0)
-            equipWeapon(mob, rnd);
+        /* --- 2. экипировка ---------------------------------------------*/
+        if (rnd.nextDouble() < Config.ARMOR_DROP_CHANCE / 100.0) equipArmor(mob, rnd);
+        if (rnd.nextDouble() < Config.WEAPON_DROP_CHANCE / 100.0
+                && !(mob instanceof AbstractSkeleton)) equipWeapon(mob, rnd);
     }
 
-    /* ===================================================================
+    /* ==================================================================
+     *  Второй этап — то, что должно применяться, когда моб УЖЕ в мире:
+     *  endless-potions и луки скелетов
+     * =================================================================*/
+    @SubscribeEvent
+    public static void onEntityJoin(EntityJoinLevelEvent event) {
+        if (!(event.getEntity() instanceof Mob mob)) return;
+        if (!shouldModify(mob)) return;
+
+        RandomSource rnd = mob.level().getRandom();
+
+        /* --- 1. бесконечные эффекты (работают теперь корректно) --------*/
+        addPotionEffects(mob, rnd);
+
+        /* --- 2. лук скелета → Power I–V -------------------------------*/
+        if (mob instanceof AbstractSkeleton sk) {
+            if (rnd.nextDouble() < Config.WEAPON_ENCHANT_CHANCE / 100.0) {
+                ItemStack bow = sk.getMainHandItem();
+                if (bow.is(Items.BOW))
+                    enchantItem(bow, rnd, ItemType.BOW, sk);
+            }
+        }
+    }
+
+    /* ==================================================================
      *  Броня
      * =================================================================*/
     private static void equipArmor(Mob mob, RandomSource rnd) {
@@ -160,8 +189,8 @@ public final class EntitySpawnHandler {
         };
     }
 
-    /* ===================================================================
-     *  Оружие (обычные мобы)
+    /* ==================================================================
+     *  Оружие (не для скелетов)
      * =================================================================*/
     private static void equipWeapon(Mob mob, RandomSource rnd) {
         String category = getWeighted(rnd, Config.WEAPON_ITEM);
@@ -215,46 +244,25 @@ public final class EntitySpawnHandler {
         };
     }
 
-    /* ===================================================================
-     *  Лук скелета  → Power I-V
-     * =================================================================*/
-    @SubscribeEvent
-    public static void onEntityJoin(EntityJoinLevelEvent event) {
-        if (!(event.getEntity() instanceof AbstractSkeleton sk)) return;
-
-        RandomSource rnd = sk.level().getRandom();
-        // шанс зачарования
-        if (rnd.nextDouble() >= Config.WEAPON_ENCHANT_CHANCE / 100.0) return;
-
-        ItemStack bow = sk.getMainHandItem();
-        if (!bow.is(Items.BOW)) return;
-
-        // зачаруем powerX
-        enchantItem(bow, rnd, ItemType.BOW, sk);
-    }
-
-    /* ===================================================================
-     *  Энчант (универсальный)
+    /* ==================================================================
+     *  Энчант
      * =================================================================*/
     private enum ItemType {ARMOR, MELEE, BOW}
 
     private static void enchantItem(ItemStack stack, RandomSource rnd,
                                     ItemType type, Mob mob) {
 
-        /* 1. отбираем допустимые ключи */
+        /* --- 1. подходящие ключи --------------------------------------*/
         Map<String, Double> pool = new HashMap<>();
         for (Entry<String, Double> e : Config.ENCHANT.entrySet()) {
             String k = e.getKey();
-            if (type == ItemType.MELEE && k.startsWith("sharpness"))
-                pool.put(k, e.getValue());
-            else if (type == ItemType.ARMOR && k.startsWith("protection"))
-                pool.put(k, e.getValue());
-            else if (type == ItemType.BOW && k.startsWith("power"))
-                pool.put(k, e.getValue());
+            if (type == ItemType.MELEE && k.startsWith("sharpness")) pool.put(k, e.getValue());
+            else if (type == ItemType.ARMOR && k.startsWith("protection")) pool.put(k, e.getValue());
+            else if (type == ItemType.BOW && k.startsWith("power")) pool.put(k, e.getValue());
         }
         if (pool.isEmpty()) return;
 
-        /* 2. взвешенный выбор */
+        /* --- 2. взвешенный выбор --------------------------------------*/
         String chosen = getWeighted(rnd, pool);
         if (chosen == null) return;
 
@@ -263,7 +271,7 @@ public final class EntitySpawnHandler {
         String base = m.group(1);
         int lvl = Integer.parseInt(m.group(2));
 
-        /* 3. ResourceKey<Enchantment> */
+        /* --- 3. ResourceKey<Enchantment> ------------------------------*/
         ResourceKey<Enchantment> key = switch (base) {
             case "sharpness" -> Enchantments.SHARPNESS;
             case "protection" -> Enchantments.PROTECTION;
@@ -272,18 +280,18 @@ public final class EntitySpawnHandler {
         };
         if (key == null) return;
 
-        /* 4. Holder<Enchantment> через локальный registryAccess */
+        /* --- 4. Holder<Enchantment> ----------------------------------*/
         Holder<Enchantment> holder =
                 mob.registryAccess()
                         .registryOrThrow(Registries.ENCHANTMENT)
                         .getHolderOrThrow(key);
 
-        /* 5. накладываем чару */
+        /* --- 5. наложить чару ----------------------------------------*/
         stack.enchant(holder, lvl);
     }
 
-    /* ===================================================================
-     *  Бесконечные Potion-эффекты
+    /* ==================================================================
+     *  Endless potion-effects
      * =================================================================*/
     private static void addPotionEffects(Mob mob, RandomSource rnd) {
         Pattern p = Pattern.compile("([a-z_:]+)(\\d+)", Pattern.CASE_INSENSITIVE);
@@ -295,26 +303,35 @@ public final class EntitySpawnHandler {
             if (!m.matches()) continue;
 
             ResourceLocation rl = ResourceLocation.parse(m.group(1));
-            int amp = Integer.parseInt(m.group(2)) - 1;
+            int amplifier = Integer.parseInt(m.group(2)) - 1;
 
             Holder<MobEffect> eff =
                     mob.registryAccess()
                             .registryOrThrow(Registries.MOB_EFFECT)
                             .getHolderOrThrow(ResourceKey.create(Registries.MOB_EFFECT, rl));
 
-            mob.addEffect(new MobEffectInstance(eff,
-                    Integer.MAX_VALUE, amp, false, true));
+            mob.addEffect(new MobEffectInstance(eff, Integer.MAX_VALUE,
+                    amplifier, false, true));
         }
     }
 
-    /* ===================================================================
-     *  Атрибуты и утилиты
+    /* ==================================================================
+     *  Атрибуты и взвешенные утилиты
      * =================================================================*/
-    private static void modifyAttribute(Mob mob, Holder<Attribute> attr,
-                                        RandomSource rnd, Map<Integer, Double> cfg) {
+
+    /**
+     * @return true — если значение действительно изменялось
+     */
+    private static boolean modifyAttribute(Mob mob, Holder<Attribute> attr,
+                                           RandomSource rnd, Map<Integer, Double> cfg) {
         var inst = mob.getAttribute(attr);
-        if (inst != null && rnd.nextDouble() < sum(cfg) / 100.0)
+        if (inst == null) return false;
+
+        if (rnd.nextDouble() < sum(cfg) / 100.0) {
             inst.setBaseValue(inst.getBaseValue() * weighted(cfg, rnd));
+            return true;
+        }
+        return false;
     }
 
     private static int sum(Map<Integer, ?> m) {
