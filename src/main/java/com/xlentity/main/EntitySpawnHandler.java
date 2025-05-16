@@ -310,8 +310,14 @@ public final class EntitySpawnHandler {
                             .registryOrThrow(Registries.MOB_EFFECT)
                             .getHolderOrThrow(ResourceKey.create(Registries.MOB_EFFECT, rl));
 
-            mob.addEffect(new MobEffectInstance(eff, Integer.MAX_VALUE,
-                    amplifier, false, true));
+            mob.addEffect(
+                    new MobEffectInstance(
+                            eff,
+                            Integer.MAX_VALUE,
+                            amplifier,
+                            false,
+                            false
+                    ));
         }
     }
 
