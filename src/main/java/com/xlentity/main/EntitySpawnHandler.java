@@ -54,10 +54,10 @@ public final class EntitySpawnHandler {
     }
 
     /**
-     * true ⇢ моб должен быть изменён
+     * True ⇢ моб должен быть изменён
      */
     private static boolean shouldModify(Mob mob) {
-        return Config.MODIFY_FRIENDLY || mob.getType().getCategory() == MobCategory.MONSTER;
+        return !Config.MODIFY_FRIENDLY && mob.getType().getCategory() != MobCategory.MONSTER;
     }
 
     /* ==================================================================
@@ -66,8 +66,8 @@ public final class EntitySpawnHandler {
      * =================================================================*/
     @SubscribeEvent
     public static void onFinalizeSpawn(FinalizeSpawnEvent event) {
-        if (!(event.getEntity() instanceof Mob mob)) return;
-        if (!shouldModify(mob)) return;
+        Mob mob = event.getEntity();
+        if (shouldModify(mob)) return;
 
         LevelAccessor level = event.getLevel();
         RandomSource rnd = level.getRandom();
@@ -95,7 +95,7 @@ public final class EntitySpawnHandler {
     @SubscribeEvent
     public static void onEntityJoin(EntityJoinLevelEvent event) {
         if (!(event.getEntity() instanceof Mob mob)) return;
-        if (!shouldModify(mob)) return;
+        if (shouldModify(mob)) return;
 
         RandomSource rnd = mob.level().getRandom();
 
