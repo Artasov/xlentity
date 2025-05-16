@@ -77,7 +77,7 @@ Please, if you like what I do, put at least a star on Github.
         "boots": 25
       },
       "type": {
-        // If we have a halmet, then the type of this helmet is random
+        // If we have a helmet, then the type of this helmet is random
         // 0.2% on nether thing
         "nether": 0.2,
         // 1% on diamond thing
