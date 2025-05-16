@@ -317,7 +317,8 @@ public final class EntitySpawnHandler {
                             amplifier,
                             false,
                             false
-                    ));
+                    )
+            );
         }
     }
 
