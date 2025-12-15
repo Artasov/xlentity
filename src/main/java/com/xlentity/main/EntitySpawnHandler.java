@@ -15,6 +15,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.AbstractSkeleton;
@@ -57,6 +58,7 @@ public final class EntitySpawnHandler {
      * True ⇢ моб должен быть изменён
      */
     private static boolean shouldModify(Mob mob) {
+        if (mob instanceof EnderDragon) return false;
         return !Config.MODIFY_FRIENDLY && mob.getType().getCategory() != MobCategory.MONSTER;
     }
 

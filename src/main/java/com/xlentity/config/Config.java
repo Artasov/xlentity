@@ -28,6 +28,8 @@ public final class Config {
     public static volatile double WEAPON_ENCHANT_CHANCE;
     public static volatile boolean MODIFY_FRIENDLY;
 
+    public static volatile double DRAGON_REGEN_PER_SECOND;
+
     public static final Map<String, Double> ARMOR_ITEM = new LinkedHashMap<>();
     public static final Map<String, Double> ARMOR_TYPE = new LinkedHashMap<>();
     public static final Map<String, Double> WEAPON_ITEM = new LinkedHashMap<>();
@@ -112,6 +114,12 @@ public final class Config {
         syncMap(WEAPON_ITEM, toStrDoubleMap(d.equipment.weapon.item));
         syncMap(WEAPON_TYPE, toStrDoubleMap(d.equipment.weapon.type));
         syncMap(ENCHANT, toStrDoubleMap(d.equipment.enchant));
+
+        if (d.bosses != null && d.bosses.enderDragon != null) {
+            DRAGON_REGEN_PER_SECOND = d.bosses.enderDragon.regenPerSecond;
+        } else {
+            DRAGON_REGEN_PER_SECOND = 4.0;
+        }
     }
 
     private static <K, V> void syncMap(Map<K, V> dst, Map<K, V> src) {
@@ -225,6 +233,10 @@ public final class Config {
         d.equipment.enchant.put("power4", 2.0);
         d.equipment.enchant.put("power5", 1.0);
 
+        d.bosses = new BossSection();
+        d.bosses.enderDragon = new DragonSection();
+        d.bosses.enderDragon.regenPerSecond = 4.0;
+
         return d;
     }
 
@@ -236,6 +248,7 @@ public final class Config {
         AttributeSection attributes = new AttributeSection();
         Map<String, Double> potions = new LinkedHashMap<>();
         EquipmentSection equipment = new EquipmentSection();
+        BossSection bosses = new BossSection();
     }
 
     private static final class AttributeSection {
@@ -262,5 +275,13 @@ public final class Config {
     private static final class WeaponSection {
         Map<String, Double> item = new LinkedHashMap<>();
         Map<String, Double> type = new LinkedHashMap<>();
+    }
+
+    private static final class BossSection {
+        DragonSection enderDragon = new DragonSection();
+    }
+
+    private static final class DragonSection {
+        double regenPerSecond = 4.0;
     }
 }
