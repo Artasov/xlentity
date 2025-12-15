@@ -118,7 +118,7 @@ public final class Config {
         if (d.bosses != null && d.bosses.enderDragon != null) {
             DRAGON_REGEN_PER_SECOND = d.bosses.enderDragon.regenPerSecond;
         } else {
-            DRAGON_REGEN_PER_SECOND = 4.0;
+            DRAGON_REGEN_PER_SECOND = 5.0;
         }
     }
 
@@ -235,7 +235,7 @@ public final class Config {
 
         d.bosses = new BossSection();
         d.bosses.enderDragon = new DragonSection();
-        d.bosses.enderDragon.regenPerSecond = 4.0;
+        d.bosses.enderDragon.regenPerSecond = 5.0;
 
         return d;
     }
@@ -282,6 +282,6 @@ public final class Config {
     }
 
     private static final class DragonSection {
-        double regenPerSecond = 4.0;
+        double regenPerSecond = 5.0;
     }
 }
