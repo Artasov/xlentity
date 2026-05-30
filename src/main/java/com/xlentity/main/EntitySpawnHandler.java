@@ -18,6 +18,7 @@ import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.AbstractSkeleton;
+import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -303,6 +304,9 @@ public final class EntitySpawnHandler {
             if (!m.matches()) continue;
 
             ResourceLocation rl = ResourceLocation.parse(m.group(1));
+            if (mob instanceof Creeper && isRegenerationEffect(rl)) {
+                continue;
+            }
             int amplifier = Integer.parseInt(m.group(2)) - 1;
 
             Holder<MobEffect> eff =
@@ -320,6 +324,10 @@ public final class EntitySpawnHandler {
                     )
             );
         }
+    }
+
+    private static boolean isRegenerationEffect(ResourceLocation rl) {
+        return "regeneration".equals(rl.getPath());
     }
 
     /* ==================================================================
