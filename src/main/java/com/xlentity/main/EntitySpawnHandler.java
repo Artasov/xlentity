@@ -38,6 +38,8 @@ import java.util.regex.Pattern;
 
 @EventBusSubscriber(modid = Core.MODID)
 public final class EntitySpawnHandler {
+    private static final String JOIN_PROCESSED_TAG = "xlentity:join_processed";
+    private static final int POTION_DURATION_TICKS = 20 * 60 * 60;
 
     /* ------------------------------------------------------------------
      *  helpers to pull live config maps
@@ -97,6 +99,7 @@ public final class EntitySpawnHandler {
     public static void onEntityJoin(EntityJoinLevelEvent event) {
         if (!(event.getEntity() instanceof Mob mob)) return;
         if (shouldModify(mob)) return;
+        if (mob.getPersistentData().getBoolean(JOIN_PROCESSED_TAG)) return;
 
         RandomSource rnd = mob.level().getRandom();
 
@@ -111,6 +114,7 @@ public final class EntitySpawnHandler {
                     enchantItem(bow, rnd, ItemType.BOW, sk);
             }
         }
+        mob.getPersistentData().putBoolean(JOIN_PROCESSED_TAG, true);
     }
 
     /* ==================================================================
@@ -317,7 +321,7 @@ public final class EntitySpawnHandler {
             mob.addEffect(
                     new MobEffectInstance(
                             eff,
-                            Integer.MAX_VALUE,
+                            POTION_DURATION_TICKS,
                             amplifier,
                             false,
                             false
