@@ -114,6 +114,20 @@ configurations {
 dependencies {
 }
 
+// Opt-in, local-only native regression fixture; not part of the release jar.
+sourceSets {
+    stalkerTest {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
+tasks.register('stalkerTestJar', Jar) {
+    dependsOn tasks.named('stalkerTestClasses')
+    archiveClassifier = 'stalker-test'
+    from sourceSets.stalkerTest.output
+}
+
 // This block of code expands all declared replace properties in the specified resource targets.
 // A missing property will result in an error. Properties are expanded using ${} Groovy notation.
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

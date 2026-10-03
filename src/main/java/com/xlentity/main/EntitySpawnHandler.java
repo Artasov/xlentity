@@ -70,6 +70,10 @@ public final class EntitySpawnHandler {
     @SubscribeEvent
     public static void onFinalizeSpawn(FinalizeSpawnEvent event) {
         Mob mob = event.getEntity();
+        if (NightmareStalkerBalance.manages(mob)) {
+            NightmareStalkerBalance.applyAttributes(mob, true);
+            return;
+        }
         if (shouldModify(mob)) return;
 
         LevelAccessor level = event.getLevel();
@@ -98,6 +102,10 @@ public final class EntitySpawnHandler {
     @SubscribeEvent
     public static void onEntityJoin(EntityJoinLevelEvent event) {
         if (!(event.getEntity() instanceof Mob mob)) return;
+        if (NightmareStalkerBalance.manages(mob)) {
+            if (!event.getLevel().isClientSide()) NightmareStalkerBalance.applyAttributes(mob, false);
+            return;
+        }
         if (shouldModify(mob)) return;
         if (mob.getPersistentData().getBoolean(JOIN_PROCESSED_TAG)) return;
 

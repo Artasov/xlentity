@@ -27,6 +27,7 @@ public final class Config {
     public static volatile double ARMOR_ENCHANT_CHANCE;
     public static volatile double WEAPON_ENCHANT_CHANCE;
     public static volatile boolean MODIFY_FRIENDLY;
+    public static volatile NightmareStalkerSettings NIGHTMARE_STALKER = new NightmareStalkerSettings();
 
     public static final Map<String, Double> ARMOR_ITEM = new LinkedHashMap<>();
     public static final Map<String, Double> ARMOR_TYPE = new LinkedHashMap<>();
@@ -94,6 +95,7 @@ public final class Config {
      *  Перекладываем значения в публичные поля
      * ===================================================================*/
     private static void applyToStatics(ConfigData d) {
+        NIGHTMARE_STALKER = d.nightmareStalker == null ? new NightmareStalkerSettings() : d.nightmareStalker;
 
         syncMap(HEALTH_CONFIG, toIntDoubleMap(d.attributes.maxHealth));
         syncMap(DAMAGE_CONFIG, toIntDoubleMap(d.attributes.attackDamage));
@@ -232,10 +234,19 @@ public final class Config {
      *  POJO-структуры для GSON
      * ===================================================================*/
     private static final class ConfigData {
+        NightmareStalkerSettings nightmareStalker = new NightmareStalkerSettings();
         int modifyFriendly = 0;
         AttributeSection attributes = new AttributeSection();
         Map<String, Double> potions = new LinkedHashMap<>();
         EquipmentSection equipment = new EquipmentSection();
+    }
+
+    public static final class NightmareStalkerSettings {
+        public boolean enabled = true;
+        public double maxHealth = 60.0;
+        public double attackDamage = 6.0;
+        public double movementSpeed = 0.25;
+        public double followRange = 32.0;
     }
 
     private static final class AttributeSection {
